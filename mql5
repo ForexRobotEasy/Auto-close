@@ -1,0 +1,114 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                                   Auto Close.mq5 |
+//|                        Copyright 2021, Forex Robot Easy Team      |
+//|                             https://www.forexroboteasy.com        |
+//+------------------------------------------------------------------+
+#property strict
+
+// Total Profit Position Closure parameters
+input double totalProfitThreshold = 100.0; // Total profit threshold to close all positions
+bool totalProfitClosureActivated = false; // Flag to activate Total Profit Position Closure
+
+// Single Profit Position Closure parameters
+input double singleProfitThreshold = 10.0; // Profit threshold to close individual positions
+bool singleProfitClosureActivated = false; // Flag to activate Single Profit Position Closure
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Subscribe to the necessary events
+    EventSetTimer(1); // Regularly check for position closure conditions
+    EventSetMillisecondTimer(1000); // Set timer interval to 1 second
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Unsubscribe from the events
+    EventKillTimer();
+    EventKillMillisecondTimer();
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+void OnTimer()
+{
+    // Check for Total Profit Position Closure
+    if (totalProfitClosureActivated)
+    {
+        double totalProfit = CalculateTotalProfit(); // Calculate the total profit
+        if (totalProfit >= totalProfitThreshold)
+        {
+            CloseAllPositions(); // Close all positions
+            totalProfitClosureActivated = false; // Deactivate Total Profit Position Closure
+        }
+    }
+
+    // Check for Single Profit Position Closure
+    if (singleProfitClosureActivated)
+    {
+        ClosePositionsByProfitThreshold(singleProfitThreshold); // Close positions individually based on profit threshold
+        singleProfitClosureActivated = false; // Deactivate Single Profit Position Closure
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Calculate the total profit of all positions                       |
+//+------------------------------------------------------------------+
+double CalculateTotalProfit()
+{
+    double totalProfit = 0.0;
+    for (int i = 0; i < PositionsTotal(); i++)
+    {
+        if (PositionSelectByIndex(i))
+        {
+            totalProfit += PositionGetDouble(POSITION_PROFIT);
+        }
+    }
+    return totalProfit;
+}
+
+//+------------------------------------------------------------------+
+//| Close all positions                                               |
+//+------------------------------------------------------------------+
+void CloseAllPositions()
+{
+    for (int i = 0; i < PositionsTotal(); i++)
+    {
+        if (PositionSelectByIndex(i))
+        {
+            if (PositionClose(PositionGetTicket()) == false)
+            {
+                Print('Error closing position: ', GetLastError());
+            }
+        }
+    }
+}
+
+//+------------------------------------------------------------------+
+//| Close positions individually based on profit threshold            |
+//+------------------------------------------------------------------+
+void ClosePositionsByProfitThreshold(const double profitThreshold)
+{
+    for (int i = 0; i < PositionsTotal(); i++)
+    {
+        if (PositionSelectByIndex(i))
+        {
+            double positionProfit = PositionGetDouble(POSITION_PROFIT);
+            if (positionProfit >= profitThreshold)
+            {
+                if (PositionClose(PositionGetTicket()) == false)
+                {
+                    Print('Error closing position: ', GetLastError());
+                }
+            }
+        }
+    }
+}
